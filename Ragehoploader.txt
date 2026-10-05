@@ -25,7 +25,7 @@ local CATALOG = {
 
         Universe = 6035872082,
 
-        Loader = "https://raw.githubusercontent.com/haw1xs/Ragehop/refs/heads/main/",
+        Loader = "https://raw.githubusercontent.com/haw1xs/Ragehop/refs/heads/main/main.txt",
 
         Listed = true,
     },
