@@ -1,0 +1,639 @@
+--// RageHop Loader
+local Players = game:GetService("Players")
+local MarketplaceService = game:GetService("MarketplaceService")
+local CoreGui = game:GetService("CoreGui")
+
+local LocalPlayer = Players.LocalPlayer
+
+--==================================================
+-- CONFIG
+--==================================================
+
+local CATALOG = {
+    {
+        Key = "rivals",
+        Name = "RIVALS",
+
+        Places = {
+            17625359962,
+            71874690745115,
+            117398147513099,
+            129604661913557,
+            133215910299950,
+            18126510175,
+        },
+
+        Universe = 6035872082,
+
+        Loader = "https://raw.githubusercontent.com/haw1xs/Ragehop/refs/heads/main/",
+
+        Listed = true,
+    },
+
+    {
+        Key = "example",
+        Name = "Example Game",
+
+        Places = {
+            123456789,
+        },
+
+        Universe = 0,
+
+        Loader = "https://raw.githubusercontent.com/USERNAME/REPOSITORY/main/example.lua",
+
+        Listed = true,
+    },
+}
+
+--==================================================
+-- FUNCTIONS
+--==================================================
+
+local function findGame(placeId, universeId)
+
+    -- Сначала проверяем Universe ID
+    for _, entry in ipairs(CATALOG) do
+        if entry.Universe
+            and entry.Universe ~= 0
+            and entry.Universe == universeId then
+
+            return entry
+        end
+    end
+
+    -- Потом Place ID
+    for _, entry in ipairs(CATALOG) do
+        for _, id in ipairs(entry.Places or {}) do
+            if id == placeId then
+                return entry
+            end
+        end
+    end
+
+    return nil
+end
+
+local function loadRemote(url, chunkName)
+
+    local success, source = pcall(function()
+        return game:HttpGet(url)
+    end)
+
+    if not success then
+        warn("[Loader] Failed to download:")
+        warn(source)
+
+        return false, source
+    end
+
+    if not source or source == "" then
+        return false, "Downloaded script is empty"
+    end
+
+    local func, compileError = loadstring(
+        source,
+        "@" .. tostring(chunkName or "RemoteScript")
+    )
+
+    if not func then
+        warn("[Loader] Compile error:")
+        warn(compileError)
+
+        return false, compileError
+    end
+
+    local runSuccess, runError = pcall(func)
+
+    if not runSuccess then
+        warn("[Loader] Runtime error:")
+        warn(runError)
+
+        return false, runError
+    end
+
+    return true
+end
+
+local function launch(entry)
+
+    print(
+        "[Loader] Starting:",
+        entry.Name
+    )
+
+    local success, err = loadRemote(
+        entry.Loader,
+        entry.Key
+    )
+
+    if not success then
+        warn(
+            "[Loader] " ..
+            entry.Name ..
+            " failed: " ..
+            tostring(err)
+        )
+    end
+
+    return success
+end
+
+--==================================================
+-- AUTO DETECT
+--==================================================
+
+local supportedGame = findGame(
+    game.PlaceId,
+    game.GameId
+)
+
+if supportedGame then
+
+    print(
+        "[Loader] Detected:",
+        supportedGame.Name
+    )
+
+    launch(supportedGame)
+
+    return
+end
+
+--==================================================
+-- MENU IF GAME IS NOT SUPPORTED
+--==================================================
+
+local oldGui = CoreGui:FindFirstChild("HawixsLoader")
+
+if oldGui then
+    oldGui:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "HawixsLoader"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = false
+
+pcall(function()
+    ScreenGui.Parent = CoreGui
+end)
+
+if not ScreenGui.Parent then
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+--==================================================
+-- MAIN FRAME
+--==================================================
+
+local Main = Instance.new("Frame")
+
+Main.Name = "Main"
+Main.Parent = ScreenGui
+
+Main.Size = UDim2.fromOffset(
+    500,
+    360
+)
+
+Main.Position = UDim2.new(
+    0.5,
+    -250,
+    0.5,
+    -180
+)
+
+Main.BackgroundColor3 = Color3.fromRGB(
+    18,
+    18,
+    18
+)
+
+Main.BorderSizePixel = 0
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(
+    0,
+    10
+)
+MainCorner.Parent = Main
+
+--==================================================
+-- TITLE
+--==================================================
+
+local Title = Instance.new("TextLabel")
+
+Title.Parent = Main
+
+Title.Size = UDim2.new(
+    1,
+    -60,
+    0,
+    50
+)
+
+Title.Position = UDim2.fromOffset(
+    20,
+    5
+)
+
+Title.BackgroundTransparency = 1
+
+Title.Text = "Hawixs Loader"
+
+Title.TextColor3 = Color3.fromRGB(
+    255,
+    255,
+    255
+)
+
+Title.Font = Enum.Font.GothamBold
+
+Title.TextSize = 24
+
+Title.TextXAlignment = Enum.TextXAlignment.Left
+
+--==================================================
+-- CLOSE
+--==================================================
+
+local Close = Instance.new("TextButton")
+
+Close.Parent = Main
+
+Close.Size = UDim2.fromOffset(
+    35,
+    35
+)
+
+Close.Position = UDim2.new(
+    1,
+    -45,
+    0,
+    10
+)
+
+Close.BackgroundColor3 = Color3.fromRGB(
+    35,
+    35,
+    35
+)
+
+Close.Text = "×"
+
+Close.TextSize = 25
+
+Close.TextColor3 = Color3.fromRGB(
+    255,
+    255,
+    255
+)
+
+Close.Font = Enum.Font.GothamBold
+
+Close.BorderSizePixel = 0
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(
+    0,
+    6
+)
+CloseCorner.Parent = Close
+
+Close.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+--==================================================
+-- GAME INFO
+--==================================================
+
+local gameName = "Unknown Game"
+
+pcall(function()
+
+    local info = MarketplaceService:GetProductInfo(
+        game.PlaceId
+    )
+
+    if info and info.Name then
+        gameName = info.Name
+    end
+
+end)
+
+local Status = Instance.new("TextLabel")
+
+Status.Parent = Main
+
+Status.Size = UDim2.new(
+    1,
+    -40,
+    0,
+    45
+)
+
+Status.Position = UDim2.fromOffset(
+    20,
+    55
+)
+
+Status.BackgroundTransparency = 1
+
+Status.Text =
+    "Unsupported game: " ..
+    gameName ..
+    "\nPlaceId: " ..
+    tostring(game.PlaceId)
+
+Status.TextColor3 = Color3.fromRGB(
+    160,
+    160,
+    160
+)
+
+Status.Font = Enum.Font.Gotham
+
+Status.TextSize = 13
+
+Status.TextWrapped = true
+
+Status.TextXAlignment = Enum.TextXAlignment.Left
+
+--==================================================
+-- SCRIPT LIST
+--==================================================
+
+local List = Instance.new("ScrollingFrame")
+
+List.Parent = Main
+
+List.Position = UDim2.fromOffset(
+    20,
+    115
+)
+
+List.Size = UDim2.new(
+    1,
+    -40,
+    1,
+    -135
+)
+
+List.BackgroundTransparency = 1
+
+List.BorderSizePixel = 0
+
+List.ScrollBarThickness = 4
+
+List.CanvasSize = UDim2.new()
+
+List.AutomaticCanvasSize = Enum.AutomaticSize.Y
+
+local Layout = Instance.new("UIListLayout")
+
+Layout.Parent = List
+
+Layout.Padding = UDim.new(
+    0,
+    8
+)
+
+Layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+--==================================================
+-- CREATE SCRIPT BUTTON
+--==================================================
+
+local function createScriptButton(entry)
+
+    local Button = Instance.new("TextButton")
+
+    Button.Parent = List
+
+    Button.Size = UDim2.new(
+        1,
+        -5,
+        0,
+        55
+    )
+
+    Button.BackgroundColor3 = Color3.fromRGB(
+        28,
+        28,
+        28
+    )
+
+    Button.BorderSizePixel = 0
+
+    Button.Text = ""
+
+    local Corner = Instance.new("UICorner")
+
+    Corner.CornerRadius = UDim.new(
+        0,
+        7
+    )
+
+    Corner.Parent = Button
+
+    local Name = Instance.new("TextLabel")
+
+    Name.Parent = Button
+
+    Name.Size = UDim2.new(
+        1,
+        -100,
+        1,
+        0
+    )
+
+    Name.Position = UDim2.fromOffset(
+        15,
+        0
+    )
+
+    Name.BackgroundTransparency = 1
+
+    Name.Text = entry.Name
+
+    Name.Font = Enum.Font.GothamSemibold
+
+    Name.TextSize = 15
+
+    Name.TextColor3 = Color3.fromRGB(
+        235,
+        235,
+        235
+    )
+
+    Name.TextXAlignment = Enum.TextXAlignment.Left
+
+    local Run = Instance.new("TextLabel")
+
+    Run.Parent = Button
+
+    Run.AnchorPoint = Vector2.new(
+        1,
+        0.5
+    )
+
+    Run.Position = UDim2.new(
+        1,
+        -15,
+        0.5,
+        0
+    )
+
+    Run.Size = UDim2.fromOffset(
+        65,
+        30
+    )
+
+    Run.BackgroundColor3 = Color3.fromRGB(
+        240,
+        240,
+        240
+    )
+
+    Run.TextColor3 = Color3.fromRGB(
+        20,
+        20,
+        20
+    )
+
+    Run.Text = "RUN"
+
+    Run.Font = Enum.Font.GothamBold
+
+    Run.TextSize = 12
+
+    local RunCorner = Instance.new("UICorner")
+
+    RunCorner.CornerRadius = UDim.new(
+        0,
+        5
+    )
+
+    RunCorner.Parent = Run
+
+    local running = false
+
+    Button.MouseButton1Click:Connect(function()
+
+        if running then
+            return
+        end
+
+        running = true
+
+        Run.Text = "..."
+
+        task.spawn(function()
+
+            local success = launch(entry)
+
+            if success then
+
+                Run.Text = "OK"
+
+                task.wait(1)
+
+                ScreenGui:Destroy()
+
+            else
+
+                Run.Text = "ERROR"
+
+                task.wait(2)
+
+                Run.Text = "RUN"
+
+                running = false
+
+            end
+
+        end)
+
+    end)
+
+end
+
+--==================================================
+-- ADD CATALOG
+--==================================================
+
+for _, entry in ipairs(CATALOG) do
+
+    if entry.Listed then
+        createScriptButton(entry)
+    end
+
+end
+
+--==================================================
+-- DRAG
+--==================================================
+
+local UserInputService = game:GetService(
+    "UserInputService"
+)
+
+local dragging = false
+local dragStart
+local startPosition
+
+Main.InputBegan:Connect(function(input)
+
+    if input.UserInputType ==
+        Enum.UserInputType.MouseButton1 then
+
+        dragging = true
+
+        dragStart = input.Position
+
+        startPosition = Main.Position
+
+    end
+
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+
+    if not dragging then
+        return
+    end
+
+    if input.UserInputType ==
+        Enum.UserInputType.MouseMovement then
+
+        local delta =
+            input.Position -
+            dragStart
+
+        Main.Position = UDim2.new(
+            startPosition.X.Scale,
+            startPosition.X.Offset + delta.X,
+
+            startPosition.Y.Scale,
+            startPosition.Y.Offset + delta.Y
+        )
+
+    end
+
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+
+    if input.UserInputType ==
+        Enum.UserInputType.MouseButton1 then
+
+        dragging = false
+
+    end
+
+end)
+
+print("[Hawixs Loader] Menu loaded")
